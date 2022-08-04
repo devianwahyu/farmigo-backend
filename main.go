@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/devianwahyu/farmigo/database"
+	"github.com/devianwahyu/farmigo/database/migration"
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 )
@@ -18,6 +19,9 @@ func main() {
 
 	// Init database
 	database.DBInit()
+
+	// Database migration
+	migration.RunMigration()
 
 	// Get PORT from .env file
 	port := os.Getenv("PORT")
