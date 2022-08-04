@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/devianwahyu/farmigo/database"
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 )
@@ -14,6 +15,9 @@ func main() {
 	if err != nil {
 		log.Fatalln("Error loading .env file")
 	}
+
+	// Init database
+	database.DBInit()
 
 	// Get PORT from .env file
 	port := os.Getenv("PORT")
