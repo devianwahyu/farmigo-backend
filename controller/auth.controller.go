@@ -67,7 +67,7 @@ func AuthRegister(c *fiber.Ctx) error {
 	// Create the Claims
 	claims := jwt.MapClaims{
 		"name": user.Email,
-		"role": user.Role,
+		"role": user.RoleID,
 		"exp":  time.Now().Add(time.Hour * 72).Unix(),
 	}
 
@@ -86,5 +86,68 @@ func AuthRegister(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"status": "success",
 		"token":  t,
+	})
+}
+
+func AuthLogin(c *fiber.Ctx) error {
+	logData := new(request.LoginRequest)
+
+	// Get user request & check if error
+	if err := c.BodyParser(logData); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "failed",
+			"message": err.Error(),
+		})
+	}
+
+	// Validate user request
+	errors := request.ValidateLoginStruct(*logData)
+	if errors != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "failed",
+			"message": errors,
+		})
+	}
+
+	var user entity.User
+
+	// Check account registered
+	if database.DB.Where("email = ?", logData.Email).First(&user).RowsAffected == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"status":  "failed",
+			"message": "User not registered",
+		})
+	}
+
+	// Compare password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(logData.Password)); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "failed",
+			"message": "Password is wrong",
+		})
+	}
+
+	// Create the Claims
+	claims := jwt.MapClaims{
+		"name": user.Email,
+		"role": user.RoleID,
+		"exp":  time.Now().Add(time.Hour * 72).Unix(),
+	}
+
+	// Create token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	// Generate encoded token and send it as response.
+	t, err := token.SignedString([]byte("secret"))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "failed",
+			"message": "Failed to generate token",
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":  "success",
+		"message": t,
 	})
 }
