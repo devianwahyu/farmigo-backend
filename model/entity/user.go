@@ -18,7 +18,6 @@ type User struct {
 	Address      string         `json:"address" gorm:"size:256"`
 	Description  string         `json:"description" gorm:"size:256"`
 	ProfileImage string         `json:"profile_image" gorm:"size:256"`
-	Age          uint           `json:"age" gorm:"size:3"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `json:"deleted_at" gorm:"index"`
