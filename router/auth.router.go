@@ -8,5 +8,5 @@ import (
 func AuthRouter(r fiber.Router) {
 	r.Post("/register", controller.AuthRegister)
 	r.Post("/login", controller.AuthLogin)
-	// r.Put("/change-password")
+	r.Put("/change-password", controller.AuthChangePassword)
 }

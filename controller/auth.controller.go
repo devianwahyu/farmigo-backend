@@ -23,8 +23,7 @@ func AuthRegister(c *fiber.Ctx) error {
 	}
 
 	// Validate user request
-	errors := request.ValidateRegisterStruct(*regData)
-	if errors != nil {
+	if errors := request.ValidateRegisterStruct(*regData); errors != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  "failed",
 			"message": errors,
@@ -101,8 +100,7 @@ func AuthLogin(c *fiber.Ctx) error {
 	}
 
 	// Validate user request
-	errors := request.ValidateLoginStruct(*logData)
-	if errors != nil {
+	if errors := request.ValidateLoginStruct(*logData); errors != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  "failed",
 			"message": errors,
@@ -149,5 +147,65 @@ func AuthLogin(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":  "success",
 		"message": t,
+	})
+}
+
+func AuthChangePassword(c *fiber.Ctx) error {
+	changePassData := new(request.ChangePasswordRequest)
+
+	// Get user request & check if error
+	if err := c.BodyParser(changePassData); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "failed",
+			"message": err.Error(),
+		})
+	}
+
+	// Validate user request
+	if errors := request.ValidateChangePasswordStruct(*changePassData); errors != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "failed",
+			"message": errors,
+		})
+	}
+
+	var user entity.User
+
+	// Check account registered
+	if database.DB.Where("email = ?", changePassData.Email).First(&user).RowsAffected == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"status":  "failed",
+			"message": "User not registered",
+		})
+	}
+
+	// Compare password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(changePassData.OldPassword)); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "failed",
+			"message": "Password is wrong",
+		})
+	}
+
+	hashedPassword, errHash := bcrypt.GenerateFromPassword([]byte(changePassData.NewPassword), bcrypt.DefaultCost)
+	if errHash != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "failed",
+			"message": errHash.Error(),
+		})
+	}
+
+	// Update user password
+	resultUdate := database.DB.Model(&user).Where("email = ?", changePassData.Email).Update("password", hashedPassword)
+	if resultUdate.Error != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "failed",
+			"message": resultUdate.Error.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":  "success",
+		"message": "Password updated successfuly",
 	})
 }
